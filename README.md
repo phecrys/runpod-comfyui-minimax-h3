@@ -14,7 +14,7 @@ Civitai **[Minimax H3 INT8/INT6/INT4 ConvRot](https://civitai.red/models/2830065
 
 ```
 ├─ Dockerfile                    # CUDA 12.8 + PyTorch + 최신 ComfyUI(master) 이미지
-├─ _github/workflows/build.yml   # ★ .github 로 이름 변경 후 업로드 → GitHub 에 올리면 자동으로 이미지 빌드 (로컬 Docker 불필요)
+├─ .github/workflows/build.yml   # main 에 push 하면 자동으로 이미지 빌드 (로컬 Docker 불필요)
 ├─ config/models.yaml            # ★ 받을 모델 목록 + 옵션 (볼륨에는 models-h3.yaml 로 복사됨)
 ├─ scripts/start.sh              # 컨테이너 시작 스크립트
 ├─ scripts/provision.py          # Civitai / HF 다운로더 (파일 ID 지정, 옵션별 선택, 워크플로 파일명 치환)
@@ -48,18 +48,15 @@ Civitai 페이지의 버전과 이 템플릿 옵션의 대응 (파일 SHA256 이
 
 ---
 
-## 1. GitHub 에 올리기 (이미지 자동 빌드)
+## 1. 이미지 빌드 (GitHub Actions)
 
-Krea2 템플릿과 똑같습니다.
+이 저장소(`phecrys/runpod-comfyui-minimax-h3`)의 `main` 에 push 하면 **Actions → build-image** 가 자동으로 이미지를 빌드합니다 (약 15~25분).
 
-1. GitHub 에서 새 저장소 생성 (예: `runpod-comfyui-minimax-h3`)
-2. 이 폴더 전체를 업로드 (GitHub Desktop → *Add local repository* → Publish 가 가장 쉬움)
-   - **먼저 `_github` 폴더 이름을 `.github` 로 바꾸세요** (자동 빌드 설정 파일이 들어 있음.
-     Windows 탐색기에서 막히면 `.github.` 처럼 끝에 점을 붙여 입력)
-3. 저장소 **Actions** 탭에서 `build-image` 가 초록색이 될 때까지 대기 (약 15~25분)
-4. 프로필 → **Packages** → `runpod-comfyui-minimax-h3` → *Package settings* → **Change visibility → Public**
+1. **Actions** 탭에서 `build-image` 가 초록색이 될 때까지 대기
+2. 첫 빌드 후 한 번만: 프로필 → **Packages** → `runpod-comfyui-minimax-h3` → *Package settings* → **Change visibility → Public**
+3. ComfyUI 를 최신으로 다시 받고 싶을 때: Actions → build-image → *Run workflow* (원하면 `comfyui_ref` 에 태그 지정)
 
-결과 이미지 주소: `ghcr.io/<깃허브아이디>/runpod-comfyui-minimax-h3:latest`
+결과 이미지 주소: `ghcr.io/phecrys/runpod-comfyui-minimax-h3:latest`
 
 ---
 
@@ -80,7 +77,7 @@ RunPod 콘솔 → **My Templates → New Template**
 |---|---|
 | Template Name | `ComfyUI MiniMax H3` |
 | Template Type | Pod |
-| Container Image | `ghcr.io/<깃허브아이디>/runpod-comfyui-minimax-h3:latest` |
+| Container Image | `ghcr.io/phecrys/runpod-comfyui-minimax-h3:latest` |
 | Container Start Command | (비워 두기) |
 | Container Disk | `30 GB` |
 | Volume Disk | `150 GB` (Network Volume 을 쓸 거면 0) |
