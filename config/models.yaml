@@ -1,0 +1,163 @@
+# =====================================================================
+#  models.yaml — 파드 시작 시 자동으로 설치할 항목 (MiniMax H3)
+#  위치: /workspace/models-h3.yaml  (처음 시작할 때 이 기본 파일이 복사됨.
+#        Krea2 템플릿의 /workspace/models.yaml 과 별개라서 같은 볼륨을 써도 섞이지 않음)
+#  수정 후 파드를 재시작하거나, 터미널에서:  python /opt/h3/provision.py
+#  이미 받은 파일은 건너뛰므로 여러 번 실행해도 안전합니다.
+#
+#  ★ 대부분은 이 파일을 고칠 필요 없이 RunPod 환경변수(options 이름과 동일)로 고릅니다.
+#
+#  항목 형식
+#    - civitai: 1234567          # Civitai 모델 "버전" ID (페이지 URL의 ?modelVersionId= 값)
+#      file_id: 7654321          # (선택) 한 버전에 파일이 여러 개일 때 정확한 파일 ID
+#      dir: diffusion_models     # (선택) 저장 폴더. 생략하면 Civitai 타입으로 자동 결정
+#      name: 내파일.safetensors   # (선택) 저장 파일명
+#      when: {MINIMAX_VARIANT: int8}   # (선택) 옵션이 맞을 때만 받음
+#      replaces: 원래.safetensors # (선택) 번들 워크플로의 이 파일명을 이 항목 파일명으로 바꿈
+#      enabled: false            # (선택) 잠시 끄기
+#    - url: https://...          # Hugging Face(blob/resolve 링크 모두 OK) 또는 직접 URL
+#      dir: vae                  # url 항목은 dir 필수
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 옵션 — 같은 이름의 RunPod 환경변수가 있으면 그 값이 우선합니다.
+# ---------------------------------------------------------------------
+options:
+  # 확산 모델 정밀도:  int8 (권장, ~19.5GB) | int6 (~14.9GB) | int4 (~11.7GB) | bf16 (~37.5GB)
+  MINIMAX_VARIANT: int8
+  # 받을 모델 종류 (쉼표로 여러 개):  fl2va (텍스트/첫·끝 프레임 → 영상+오디오) | ref2va (레퍼런스 → 영상+오디오) | all
+  MINIMAX_MODES: fl2va
+  # 텍스트 인코더 (Qwen3-VL 32B):  nvfp4 (~14.6GB, 공식 템플릿 기본) | int8 (~25.3GB) | bf16 (~48GB)
+  MINIMAX_TE: nvfp4
+  # 비디오 VAE:  int8 (~2.6GB, 공식 템플릿 기본) | fp16 (~4.9GB)
+  MINIMAX_VAE: int8
+  # Turbo(스텝 증류) LoRA 받기:  1 | 0
+  MINIMAX_TURBO: "1"
+
+# ComfyUI 시작 전에 설치할 커스텀 노드 (git 주소)
+# 번들 워크플로/공식 템플릿은 ComfyUI 기본 노드만 쓰므로 필수는 아닙니다.
+custom_nodes:
+  # KJNodes: MiniMax H3 저VRAM 노드(Chunk FeedForward, LowVRAM Attention) + 원작자 Civitai 워크플로용
+  - https://github.com/kijai/ComfyUI-KJNodes
+  # 원작자(tsolful) Civitai 워크플로까지 그대로 열려면 아래 두 개도 주석 해제
+  # - https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
+  # - https://github.com/rgthree/rgthree-comfy
+
+# 추가로 받아 둘 워크플로 JSON URL (번들 MiniMax H3 워크플로 3종은 자동 설치됨)
+workflows:
+
+# 번들 워크플로의 예제 입력 이미지 (/workspace/input)
+inputs:
+  - https://raw.githubusercontent.com/Comfy-Org/workflow_templates/main/input/transparent_rgb_gaming_mouse.png
+  - https://raw.githubusercontent.com/Comfy-Org/workflow_templates/main/input/red_superboy_on_city_roof.png
+  - https://raw.githubusercontent.com/Comfy-Org/workflow_templates/main/input/mecha_dragon_lightning.png
+
+# ※ add-model 명령이 이 목록 맨 아래에 항목을 덧붙이므로 models: 는 항상 파일 마지막에 두세요.
+models:
+  # =================================================================
+  # 1) 확산 모델 — Civitai "Minimax H3 INT8/INT6/INT4 ConvRot" (모델 2830065, tsolful)
+  #    파일 SHA256 이 Comfy-Org / Kijai 배포본과 동일함을 확인했고,
+  #    저장 파일명을 공식 이름으로 맞춰 공식 템플릿과 그대로 호환됩니다.
+  #    (Civitai 다운로드는 CIVITAI_TOKEN 필요. 같은 파일 HF 주소는 각 항목 주석 참고)
+  # =================================================================
+  # --- INT8 ConvRot (W8A8) — 기본 권장, RTX 30 이상
+  - civitai: 3193337            # FL2VA INT8 Pruned
+    file_id: 3074134
+    dir: diffusion_models
+    name: minimax_h3_fl2va_pruned_int8_convrot.safetensors
+    when: {MINIMAX_VARIANT: int8, MINIMAX_MODES: fl2va}
+    # HF: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors
+  - civitai: 3193385            # REF2VA INT8 Pruned
+    file_id: 3074237
+    dir: diffusion_models
+    name: minimax_h3_ref2va_pruned_int8_convrot.safetensors
+    when: {MINIMAX_VARIANT: int8, MINIMAX_MODES: ref2va}
+    # HF: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors
+
+  # --- INT6 (W6A8) — 한 버전(3369568)에 FL/REF 두 파일이 같이 있어 file_id 로 구분
+  - civitai: 3369568
+    file_id: 3257813            # = minimax_h3_fl2va_pruned_w6a8 (SHA256 AC746A2E41…)
+    dir: diffusion_models
+    name: minimax_h3_fl2va_pruned_w6a8.safetensors
+    when: {MINIMAX_VARIANT: int6, MINIMAX_MODES: fl2va}
+    replaces: minimax_h3_fl2va_pruned_int8_convrot.safetensors
+  - civitai: 3369568
+    file_id: 3258013            # = minimax_h3_ref2va_pruned_w6a8 (SHA256 ECE96BBBCE…)
+    dir: diffusion_models
+    name: minimax_h3_ref2va_pruned_w6a8.safetensors
+    when: {MINIMAX_VARIANT: int6, MINIMAX_MODES: ref2va}
+    replaces: minimax_h3_ref2va_pruned_int8_convrot.safetensors
+
+  # --- INT4 (AsymW4A8 mixed, Kijai 양자화) — ComfyUI v0.31.0 이상
+  - civitai: 3207975
+    file_id: 3089623            # = Kijai minimax_h3_fl2va_pruned_w4a8_mixed (SHA256 01AA7B92C0…)
+    dir: diffusion_models
+    name: minimax_h3_fl2va_pruned_w4a8_mixed.safetensors
+    when: {MINIMAX_VARIANT: int4, MINIMAX_MODES: fl2va}
+    replaces: minimax_h3_fl2va_pruned_int8_convrot.safetensors
+    # HF: https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/minimax_h3_fl2va_pruned_w4a8_mixed.safetensors
+  - civitai: 3207975
+    file_id: 3091888            # = Kijai minimax_h3_ref2va_pruned_w4a8_mixed (SHA256 DE2C6C29C4…)
+    dir: diffusion_models
+    name: minimax_h3_ref2va_pruned_w4a8_mixed.safetensors
+    when: {MINIMAX_VARIANT: int4, MINIMAX_MODES: ref2va}
+    replaces: minimax_h3_ref2va_pruned_int8_convrot.safetensors
+
+  # --- BF16 (pruned 원본, 비교용 / 48~80GB GPU)
+  - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_bf16.safetensors
+    dir: diffusion_models
+    when: {MINIMAX_VARIANT: bf16, MINIMAX_MODES: fl2va}
+    replaces: minimax_h3_fl2va_pruned_int8_convrot.safetensors
+  - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_ref2va_pruned_bf16.safetensors
+    dir: diffusion_models
+    when: {MINIMAX_VARIANT: bf16, MINIMAX_MODES: ref2va}
+    replaces: minimax_h3_ref2va_pruned_int8_convrot.safetensors
+
+  # =================================================================
+  # 2) 텍스트 인코더 (Qwen3-VL 32B, CLIPLoader type=minimax) — 필수, FL/REF 공용
+  # =================================================================
+  - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+    dir: text_encoders
+    when: {MINIMAX_TE: nvfp4}
+  - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors
+    dir: text_encoders
+    when: {MINIMAX_TE: int8}
+    replaces: qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+  - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_bf16.safetensors
+    dir: text_encoders
+    when: {MINIMAX_TE: bf16}
+    replaces: qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+
+  # =================================================================
+  # 3) VAE — 비디오 VAE 1개 + 오디오 VAE (필수)
+  # =================================================================
+  - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_int8_convrot.safetensors
+    dir: vae
+    when: {MINIMAX_VAE: int8}
+  - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors
+    dir: vae
+    when: {MINIMAX_VAE: fp16}
+    replaces: minimax_h3_video_vae_int8_convrot.safetensors
+  - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors
+    dir: vae
+
+  # =================================================================
+  # 4) Turbo LoRA (lightx2v 스텝 증류) — 워크플로의 "turbo" 스위치를 켜면 사용
+  # =================================================================
+  - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors
+    dir: loras
+    when: {MINIMAX_TURBO: "1", MINIMAX_MODES: fl2va}
+  - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors
+    dir: loras
+    when: {MINIMAX_TURBO: "1", MINIMAX_MODES: ref2va}
+  # 768p 전용 4스텝 (선택)
+  - url: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16.safetensors
+    dir: loras
+    enabled: false
+
+  # =================================================================
+  # 5) 여기에 원하는 Civitai MiniMax H3 LoRA / 파인튜닝 추가
+  # =================================================================
+  # - civitai: 1111111                      # LoRA → 자동으로 loras
+  # - civitai: "https://civitai.com/models/222222?modelVersionId=3333333"
+  #   dir: loras/h3
